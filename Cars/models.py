@@ -1,8 +1,8 @@
 from django.db import models
 
 class Cars(models.Model):
-    make = models.CharField(max_length=20, NULL=False)
-    model = models.CharField(max_length=20, NULL=False)
+    make = models.CharField(max_length=20, null=False)
+    model = models.CharField(max_length=20, null=False)
 
     def __repr__(self):
         return f"{self.make} {self.model}"
