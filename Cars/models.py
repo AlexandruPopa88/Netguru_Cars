@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 class Cars(models.Model):
@@ -11,6 +12,6 @@ class Cars(models.Model):
         unique_together = ('make', 'model')
 
 
-class Car_Ratings(models.Model):
+class CarRatings(models.Model):
     car_id = models.ForeignKey(Cars, on_delete=models.CASCADE)
-    rating = models.IntegerField()
+    rating = models.SmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])

@@ -18,10 +18,8 @@ from django.urls import path, re_path
 from Cars.views import CarView, RateView, PopularView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
     path('cars/', CarView.as_view()),
     re_path(r'^cars/{\s*(?P<del_id>\d+)\s*}/?$', CarView.as_view()),
-    # path('cars/<int:del_id>/', CarView.as_view()),
     path('rate/', RateView.as_view()),
     path('popular/', PopularView.as_view())
 ]

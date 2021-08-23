@@ -1,57 +1,79 @@
-from django.shortcuts import render
 from django.views import View
-from Cars.models import Cars, Car_Ratings
-from django.http import HttpResponse
+from Cars.models import Cars, CarRatings
+from django.http import HttpResponse, JsonResponse
+from django.db.models import Count, Avg
+from django.db.utils import IntegrityError
+from django.core.exceptions import ValidationError
 import json
 import requests
 
+def try_catch(original_function):
+    def decorated(*args, **kwargs):
+        try:
+            return original_function(*args, **kwargs)
+        except json.decoder.JSONDecodeError:
+            return HttpResponse("JSONDecodeError has occurred, check json keys.", status=400)
+        except KeyError:
+            return HttpResponse("KeyError has occurred, check json syntax.", status=400)
+        except Cars.DoesNotExist:
+            return HttpResponse("Car.DoesNotExist has occurred, check id.", status=400)
+        except IntegrityError:
+            return HttpResponse("IntegrityError has occurred, this car already exists.", status=400)
+        except ValidationError:
+            return HttpResponse("ValidationError has occurred, the rating must be between 1<=rating<= 5.", status=400)
+
+
+    return decorated
 
 class CarView(View):
 
     def get(self, request):
-        all_cars = Cars.objects.all()
-        for car in all_cars:
-            ratings = Car_Ratings.objects.filter(car_id=car)
-            car.avg_rating = round(sum(rate.rating for rate in ratings) / len(ratings), 1)
-        return HttpResponse(json.dumps([{"car": car for car in all_cars}]))
+        all_cars = Cars.objects.annotate(avg_rating=Avg("carratings__rating"))
+        if all_cars:
+            return JsonResponse([{"id": car.id,
+                                  "make": car.make,
+                                  "model": car.model,
+                                  "avg_rating": car.avg_rating} for car in all_cars], safe=False)
+        return JsonResponse([], safe=False)
 
+    @try_catch
     def post(self, request):
-        data = request.body.decode('utf-8')
-        json_data = json.loads(data)
+        json_data = json.loads(request.body)
         url = f"https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/{json_data['make'].lower()}?format=json"
         check = requests.get(url)
         if check.status_code == 200:
             data = check.json()
             if data["Results"] and json_data["model"] in (car["Model_Name"] for car in data["Results"]):
-                if not Cars.objects.filter(make=json_data["make"], model=json_data["model"]):
-                    Cars.objects.create(make=json_data["make"], model=json_data["model"])
-                    return HttpResponse(f'Added car: {json_data["make"]} {json_data["model"]}')
-                return HttpResponse("Car already exists")
-            return HttpResponse("Car doesn't exist in external API")
+                car = Cars(make=json_data["make"], model=json_data["model"])
+                car.save()
+                return HttpResponse(status=201)
+            return HttpResponse("Car doesn't exist in external API", status=400)
         else:
-            raise ConnectionError("Try again later.") # nu stiu ce eroare sa pun
+            return HttpResponse("External API threw an error", status=500)
 
+    @try_catch
     def delete(self, request, del_id):
-        if not Cars.objects.filter(id=del_id).exists():
-            return HttpResponse("Error")
-        Cars.objects.filter(id=del_id).delete()
-        return HttpResponse(200)
-        # catch return 500
+        Cars.objects.get(id=del_id).delete()
+        return HttpResponse(status=200)
 
 class RateView(View):
 
+    @try_catch
     def post(self, request):
-        data = request.body.decode('utf-8')
-        json_data = json.loads(data)
-        car = Cars.objects.filter(id=json_data["car_id"])
-        if car.exists():
-            Car_Ratings.objects.create(car_id=car, rating=json_data["rating"])
-
-        # else bad inputs
+        json_data = json.loads(request.body)
+        car = Cars.objects.get(id=json_data["car_id"])
+        rating = CarRatings(car_id=car, rating=json_data["rating"])
+        rating.full_clean()
+        rating.save()
+        return HttpResponse(status=201)
 
 class PopularView(View):
 
-    def get(self):
-        pass
-        # data = Cars.objects.filter(Car_Ratings.car_id)
-        # Car_Ratings.objects.aggregate()
+    def get(self, request):
+        top_cars = Cars.objects.annotate(rates_number=Count('carratings')).order_by('-rates_number')
+        return JsonResponse([{"id": car.id,
+                              "make": car.make,
+                              "model": car.model,
+                              "rates_number": car.rates_number} for car in top_cars], safe=False)
+
+
