@@ -14,6 +14,3 @@ urlpatterns = [
     path('rate/', RateView.as_view(), name="rate"),
     path('popular/', PopularView.as_view(), name="popular")
 ]
-
-
-    # re_path(r'^cars/{\s*(?P<del_id>\d+)\s*}/?$', DeleteCarView.as_view(), name="del_car")
