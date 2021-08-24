@@ -23,7 +23,7 @@ Endpoints
 ---------
     
     Below are relative links to base url: http://127.0.0.1:8000/ 
-    - **'cars/'**
+    - 'cars/'
         * GET - returns a json response with a list of all available cars in the database of the form:
                 [{"id": 1, "make": "Audi", "model": "Q7", "avg_rating": 4.0}, 
                  {"id": 2, "make": "Volkswagen", "model": "Golf", "avg_rating": 4.5}]
@@ -32,15 +32,15 @@ Endpoints
                  external api at: https://vpic.nhtsa.dot.gov/api/
                  Expects a json in the body of the request, of the form: {"make": "Audi", "model": "Q7"}
                  
-    - **'cars/{id}/'**
+    - 'cars/{id}/'
         * DELETE - deletes a car from the database, identifying it by provided id 
                    or returns error if id is not in the database.
                    
-    - '**rate/'**
+    - 'rate/'
         * POST - attributes a rating to a car that is in the database. If the car is not in the database, returns Error.
                  Expects a json in the body of the request, of the form: {"car_id" : 1, "rating" : 5}
                  
-    - **'popular/'**
+    - 'popular/'
         * GET - returns a json response with a list of all available cars in the database,
                 sorted by number of ratings that each car received, in the form:
                 [{"id": 2, "make": "Volkswagen", "model": "Golf", "rates_number"": 45},
