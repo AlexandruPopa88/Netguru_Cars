@@ -6,6 +6,16 @@ from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
 import json
 import requests
+from rest_framework import viewsets
+from Cars.serializers import CarsSerializer, CarRatingsSerializer
+
+class CarViewSet(viewsets.ModelViewSet):
+    queryset = Cars.objects.all()
+    serializer = CarsSerializer
+
+class CarsRatingsViewSet(viewsets.ModelViewSet):
+    queryset = CarRatings.objects.all()
+    serializer = CarRatingsSerializer
 
 def try_catch(original_function):
     def decorated(*args, **kwargs):
@@ -21,6 +31,8 @@ def try_catch(original_function):
             return HttpResponse("IntegrityError has occurred, this car already exists.", status=400)
         except ValidationError:
             return HttpResponse("ValidationError has occurred, the rating must be between 1<=rating<= 5.", status=400)
+        except TypeError:
+            return HttpResponse("TypeError has occurred. Please follow the documentation.", status=400)
 
 
     return decorated
@@ -39,7 +51,7 @@ class CarView(View):
     @try_catch
     def post(self, request):
         json_data = json.loads(request.body)
-        url = f"https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/{json_data['make'].lower()}?format=json"
+        url = f"https://vpic.nhtsa.dot.gov/api/vehicles/GetModelsForMake/{json_data['make']}?format=json"
         check = requests.get(url)
         if check.status_code == 200:
             data = check.json()
@@ -52,8 +64,8 @@ class CarView(View):
             return HttpResponse("External API threw an error", status=500)
 
     @try_catch
-    def delete(self, request, del_id):
-        Cars.objects.get(id=del_id).delete()
+    def delete(self, request, id):
+        Cars.objects.get(id=id).delete()
         return HttpResponse(status=200)
 
 class RateView(View):
